@@ -88,13 +88,13 @@ class NTA
     const output = [];
     this.getBoxes().map(row => this.standardizeBoxId(row['id'])).forEach(id => {
       const newestUpdate = updates.find(update => update['Låda'] === id);
-      const newestRental = updates.find(update => update['Låda'] === id && update['Status'] === 'uthyrd');
+      const newestRental = updates.find(update => update['Låda'] === id && update['Status'].startsWith('uthyrning'));
       //BetterLog.log(newestRental);
       if(newestUpdate === undefined){
         this.S.alert('Lådan med id "' +id + '" har aldrig uppdaterats.');
       }
       const statusObj = {'id': this.prettifyBoxId(id), 'Status': newestUpdate['Status'], 'Låntagare': ''};
-      if(newestRental !== undefined){
+      if(newestRental !== undefined && newestRental['Status'] === 'uthyrning start'){
         const u = this.getUserById(Number(newestRental['Person']));
         statusObj['Låntagare'] = `${u['Förnamn']} ${u['Efternamn']}, ${u['Skola'].toUpperCase()}`;
       }       
@@ -108,6 +108,11 @@ class NTA
     SpreadsheetApp.getUi().showSidebar(html);
   }
 
+  /**
+   * 
+   * @param {Array} row 
+   * @returns {Array}
+   */
   extractMailsFromRow(row)
   {
       const mails = [row[0]];
@@ -172,12 +177,24 @@ class NTA
     return this.getPersoner().find(user => user['id'] === id);
   }
 
+  /**
+   * 
+   * @param {Object} user 
+   * @param {String} topic 
+   * @returns {Boolean}
+   */
   userHasCompetence(user, topic){
     return this.getKompetens().find(row => {
       return (row['Person_id'] === user['id']) && (row['Tema_id'] === topic)
     }) !== undefined;
   }
 
+  /**
+   * 
+   * @param {String} longName 
+   * 
+   * @returns {String} - the short 2-3 letter long uppercase topic abbreviation
+   */
   getTopicFromLongName(longName){
     let foundTopic = this.getTeman().find(topic => topic['Temanamn'] === longName);
     if(foundTopic === undefined){
@@ -206,8 +223,6 @@ class NTA
     }
     return foundSchool["Alias"];
   }
-
-  
 
   /**
    * @return {Array<Object>}
